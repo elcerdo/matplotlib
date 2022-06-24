@@ -63,11 +63,10 @@ for kk in range(10):
     plot(heat_current, label="t={}*dt".format(kk))
     heat_current = heat_1x @ heat_current
     heat_10x = heat_1x @ heat_10x
-legend()
-
 zzs = make_heat_kkx(10) @ yys 
 plot(zzs, label="t=10*dt !!")
 print("10x_error", np.abs(zzs - heat_current).max())
+legend()
 
 figure()
 heat_current = yys.copy()
@@ -76,22 +75,19 @@ for kk in range(10):
     plot(heat_current, label="t={}*dt".format(10 * kk))
     heat_current = heat_10x @ heat_current
     heat_100x = heat_10x @ heat_100x
-legend()
-
 zzs = make_heat_kkx(100) @ yys 
 plot(zzs, label="t=100*dt !!")
 print("100x_error", np.abs(zzs - heat_current).max())
+legend()
 
 figure()
 heat_current = yys.copy()
 for kk in range(10):
     plot(heat_current, label="t={}*dt".format(100 * kk))
     heat_current = heat_100x @ heat_current
-legend()
-
 zzs = make_heat_kkx(1000) @ yys 
 plot(zzs, label="t=1000*dt !!")
 print("100x_error", np.abs(zzs - heat_current).max())
-
+legend()
 
 show()
