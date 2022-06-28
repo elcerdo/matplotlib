@@ -64,13 +64,12 @@ xlabel("rank")
 ylabel("$\lambda_i$")
 plot(lap_eigvalues)
 
-extensions = {
-    0: "st",
-    1: "nd",
-    2: "rd",
-}
-
 def display_eigvector(rank):
+    extensions = {
+        0: "st",
+        1: "nd",
+        2: "rd",
+    }
     ll = lap_eigvalues[rank]
     vv = lap_eigvectors[:, rank].reshape(nn, nn)
     figure()
