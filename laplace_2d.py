@@ -52,14 +52,14 @@ assert np.abs(lap - lap.T).max() < 1e-5
 
 ### eigen decomposion of lap
 
-eigvalues, eigvectors = lin.eigh(lap)
-print(eigvalues)
+lap_eigvalues, lap_eigvectors = lin.eigh(lap)
+print(lap_eigvalues)
 
 figure()
 title("2D $\Delta$ spectrum")
 xlabel("rank")
 ylabel("$\lambda_i$")
-plot(eigvalues)
+plot(lap_eigvalues)
 
 extensions = {
     0: "st",
@@ -68,8 +68,8 @@ extensions = {
 }
 
 def display_eigvector(rank):
-    ll = eigvalues[rank]
-    vv = eigvectors[:, rank].reshape(nn, nn)
+    ll = lap_eigvalues[rank]
+    vv = lap_eigvectors[:, rank].reshape(nn, nn)
     figure()
     title("2D {}{} eigen vector $\lambda_{{{}}} = {:.2f}$".format(
         rank + 1,
@@ -100,30 +100,46 @@ def make_heat_ope(dt, nstep):
         heat = heat @ dheat
     return heat
 
-heat_profiles_labels= [
+figure()
+title("2D $I - t \Delta$ spectrum")
+xlabel("rank")
+ylabel("$\lambda_i$")
+plot(lin.eigvalsh(make_heat_ope(.2, 1)))
+
+def display_heat_solutions(heat_profiles_labels, label=None):
+    figure()
+    if label is not None:
+        title(label)
+    foo = len(heat_profiles_labels)
+    current = 1
+    for heat_profile, heat_label in heat_profiles_labels:
+        subplot(3, foo, current)
+        title(heat_label)
+        current += 1
+        axis('off')
+        imshow(heat_profile.reshape(nn, nn), vmin=0, vmax=1)
+        axhline(nn / 2, color="r")
+    for heat_profile, heat_label in heat_profiles_labels:
+        subplot(3, foo, current)
+        current += 1
+        axis('off')
+        imshow(np.log(heat_profile.reshape(nn, nn) + 1e-9), cmap=plt.get_cmap("flag"), vmin=-8, vmax=0)
+        axhline(nn / 2, color="r")
+    for heat_profile, heat_label in heat_profiles_labels:
+        subplot(3, foo, current)
+        current += 1
+        axis('off')
+        ylim(-.1, 1.1)
+        plot(heat_profile.reshape(nn, nn)[nn // 2, :])
+
+display_heat_solutions([
     (heat_input, "input"),
     (lin.solve(make_heat_ope(1, 1), heat_input), "1s"),
     (lin.solve(make_heat_ope(10, 1), heat_input), "10s"),
     (lin.solve(make_heat_ope(100, 1), heat_input), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
-]
+], "Euler heat solutions")
 
-figure()
-foo = len(heat_profiles_labels)
-current = 1
-for heat_profile, heat_label in heat_profiles_labels:
-    subplot(2, foo, current)
-    title(heat_label)
-    current += 1
-    axis('off')
-    imshow(heat_profile.reshape(nn, nn), vmin=0, vmax=1)
-    axhline(nn / 2, color="r")
-for heat_profile, heat_label in heat_profiles_labels:
-    subplot(2, foo, current)
-    current += 1
-    axis('off')
-    ylim(-.1, 1.1)
-    plot(heat_profile.reshape(nn, nn)[nn // 2, :])
 
 show()
 
