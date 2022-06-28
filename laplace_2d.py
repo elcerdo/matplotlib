@@ -54,6 +54,9 @@ assert np.abs(lap - lap.T).max() < 1e-5
 
 lap_eigvalues, lap_eigvectors = lin.eigh(lap)
 print(lap_eigvalues)
+assert np.abs(lap_eigvectors @ np.diag(lap_eigvalues) @ lap_eigvectors.T - lap).max() < 1e-5
+assert np.abs(lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T @ lap - np.eye(mm)).max() < 1e-5
+assert np.abs(lap @ lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 
 figure()
 title("2D $\Delta$ spectrum")
@@ -124,7 +127,6 @@ def display_heat_solutions(heat_profiles_labels, label=None):
         current += 1
         axis('off')
         imshow(np.log(heat_profile.reshape(nn, nn) + 1e-9), cmap=plt.get_cmap("flag"), vmin=-8, vmax=0)
-        axhline(nn / 2, color="r")
     for heat_profile, heat_label in heat_profiles_labels:
         subplot(3, foo, current)
         current += 1
