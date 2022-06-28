@@ -40,11 +40,13 @@ for index, cell in enumerate(zip(iis, jjs)):
         index_ = cell_to_indices[cell_]
         lap[index, index_] -= 1
     lap[index, index] = accum
+lap += 1e-2 * np.eye(mm)
 
 print(lap)
 print(lap.sum(axis=0))
 print(lap.sum(axis=1))
 print(np.abs(lap - lap.T).max())
+print(lin.matrix_rank(lap))
 assert np.abs(lap - lap.T).max() < 1e-5
 
 ### eigen decomposion of lap
@@ -75,7 +77,8 @@ def display_eigvector(rank):
         extensions.get(rank, "th"),
         rank,
         ll))
-    imshow(vv, vmin=-.25, vmax=.25)
+    ss = 1 / 4 * 8 / nn
+    imshow(vv, vmin=-ss, vmax=ss)
     colorbar()
 
 for rank in range(5):
