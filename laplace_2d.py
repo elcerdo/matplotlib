@@ -3,8 +3,9 @@
 
 import numpy as np
 import numpy.linalg as lin
+from pylab import *
 
-nn = 8
+nn = 32
 
 ### build complex
 
@@ -40,7 +41,7 @@ for index, cell in enumerate(zip(iis, jjs)):
         index_ = cell_to_indices[cell_]
         lap[index, index_] -= 1
     lap[index, index] = accum
-lap += 1e-2 * np.eye(mm)
+lap += 1e-5 * np.eye(mm)
 
 print(lap)
 print(lap.sum(axis=0))
@@ -53,8 +54,6 @@ assert np.abs(lap - lap.T).max() < 1e-5
 
 eigvalues, eigvectors = lin.eigh(lap)
 print(eigvalues)
-
-from pylab import *
 
 figure()
 title("2D $\Delta$ spectrum")
@@ -74,12 +73,12 @@ def display_eigvector(rank):
     figure()
     title("2D {}{} eigen vector $\lambda_{{{}}} = {:.2f}$".format(
         rank + 1,
-        extensions.get(rank, "th"),
+        extensions.get(rank % 10, "th"),
         rank,
         ll))
     ss = 1 / 4 * 8 / nn
     imshow(vv, vmin=-ss, vmax=ss)
-    colorbar()
+    #colorbar()
 
 for rank in range(5):
     display_eigvector(rank)
@@ -87,7 +86,44 @@ for rank in range(5):
 display_eigvector(32)
 display_eigvector(56)
 
+### heat diffusion
 
+heat_input = np.zeros((nn, nn))
+heat_input[nn // 3 : 2 * nn // 3,  nn // 2 : 3 * nn // 4] = 1
+
+heat_input = heat_input.flatten()
+
+def make_heat_ope(dt, nstep):
+    heat = np.eye(mm, mm)
+    dheat = np.eye(mm, mm) + dt * lap / nstep
+    for kk in range(nstep):
+        heat = heat @ dheat
+    return heat
+
+heat_profiles_labels= [
+    (heat_input, "input"),
+    (lin.solve(make_heat_ope(1, 1), heat_input), "1s"),
+    (lin.solve(make_heat_ope(10, 1), heat_input), "10s"),
+    (lin.solve(make_heat_ope(100, 1), heat_input), "100s"),
+    (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
+]
+
+figure()
+foo = len(heat_profiles_labels)
+current = 1
+for heat_profile, heat_label in heat_profiles_labels:
+    subplot(2, foo, current)
+    title(heat_label)
+    current += 1
+    axis('off')
+    imshow(heat_profile.reshape(nn, nn), vmin=0, vmax=1)
+    axhline(nn / 2, color="r")
+for heat_profile, heat_label in heat_profiles_labels:
+    subplot(2, foo, current)
+    current += 1
+    axis('off')
+    ylim(-.1, 1.1)
+    plot(heat_profile.reshape(nn, nn)[nn // 2, :])
 
 show()
 
