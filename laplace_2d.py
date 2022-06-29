@@ -41,7 +41,7 @@ for index, cell in enumerate(zip(iis, jjs)):
         index_ = cell_to_indices[cell_]
         lap[index, index_] -= 1
     lap[index, index] = accum
-lap += 1e-5 * np.eye(mm)
+lap += 1e-6 * np.eye(mm)
 
 print(lap)
 print(lap.sum(axis=0))
@@ -57,6 +57,7 @@ print(lap_eigvalues)
 assert np.abs(lap_eigvectors @ np.diag(lap_eigvalues) @ lap_eigvectors.T - lap).max() < 1e-5
 assert np.abs(lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T @ lap - np.eye(mm)).max() < 1e-5
 assert np.abs(lap @ lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
+assert np.abs(lap_eigvectors @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 
 figure()
 title("2D $\Delta$ spectrum")
@@ -64,17 +65,18 @@ xlabel("rank")
 ylabel("$\lambda_i$")
 plot(lap_eigvalues)
 
-def display_eigvectors(ranks, foo):
+def display_eigvectors(label, eigvalues, eigvectors, ranks, foo):
     extensions = {
         0: "st",
         1: "nd",
         2: "rd",
     }
     figure()
-    title("2D eigen vectors")
+    if label is not None:
+        suptitle(label)
     for kk, rank in enumerate(ranks):
-        ll = lap_eigvalues[rank]
-        vv = lap_eigvectors[:, rank].reshape(nn, nn)
+        ll = eigvalues[rank]
+        vv = eigvectors[:, rank].reshape(nn, nn)
         subplot(foo, foo, kk + 1)
         axis('off')
         title("{}{} $\lambda_{{{}}} = {:.2f}$".format(
@@ -86,7 +88,10 @@ def display_eigvectors(ranks, foo):
         imshow(vv, vmin=-ss, vmax=ss)
     #colorbar()
 
-display_eigvectors([
+display_eigvectors(
+    "2D $\Delta$ eigen vectors",
+    lap_eigvalues,
+    lap_eigvectors, [
     0, 1, 2, 3,
     4, 5, 6, 7,
     32, 33, 34, 35,
@@ -101,34 +106,19 @@ def make_heat_ope(dt, nstep):
         heat = heat @ dheat
     return heat
 
-### eigen decomposion of heat
-
-theat = 10
-heat = make_heat_ope(theat, 1)
-heat_eigvalues, heat_eigvectors = lin.eigh(heat)
-
-figure()
-title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
-xlabel("rank")
-ylabel("$\lambda_i$")
-plot(heat_eigvalues, label="$\lambda_{heat}$")
-plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
-legend()
-
-assert np.abs(theat * lap_eigvalues + 1 - heat_eigvalues).max() < 1e-5
-
 ### heat solve
 
 heat_input = np.zeros((nn, nn))
 heat_input[nn // 3 : 2 * nn // 3,  nn // 2 : 3 * nn // 4] = 1
 heat_input = heat_input.flatten()
 
-
+heat_input_ = 8 * np.eye(nn,k=nn // 3)
+heat_input_ = heat_input_.flatten()
 
 def display_heat_solutions(heat_profiles_labels, label=None):
     figure()
     if label is not None:
-        title(label)
+        suptitle(label)
     foo = len(heat_profiles_labels)
     current = 1
     for heat_profile, heat_label in heat_profiles_labels:
@@ -158,7 +148,75 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
 ], "Euler heat solutions")
 
+display_heat_solutions([
+    (heat_input_, "input"),
+    (lin.solve(make_heat_ope(1, 1), heat_input_), "1s"),
+    (lin.solve(make_heat_ope(10, 1), heat_input_), "10s"),
+    (lin.solve(make_heat_ope(100, 1), heat_input_), "100s"),
+    (lin.solve(make_heat_ope(1000, 1), heat_input_), "1000s"),
+], "Euler heat solutions")
 
+### eigen decomposion of heat
+
+theat = 50.
+heat = make_heat_ope(theat, 1)
+heat_eigvalues, heat_eigvectors = lin.eigh(heat)
+assert np.abs(theat * lap_eigvalues + 1 - heat_eigvalues).max() < 1e-5
+
+display_eigvectors(
+    "2D $heat$ eigen vectors",
+    heat_eigvalues,
+    heat_eigvectors, [
+    0, 1, 2, 3,
+    4, 5, 6, 7,
+    32, 33, 34, 35,
+    56, 57, 58, 59], 4)
+
+figure()
+title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
+xlabel("rank")
+ylabel("$\lambda_i$")
+plot(heat_eigvalues, label="$\lambda_{heat}$")
+plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
+legend()
+
+heat_ = np.eye(mm) + theat * lap_eigvectors @ diag(lap_eigvalues) @ lap_eigvectors.T
+assert np.abs(heat - heat_).max() < 1e-5
+
+lap_inv = lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T
+assert np.abs(lap_inv @ lap - np.eye(mm)).max() < 1e-5
+
+heat_inv = heat_eigvectors @ np.diag(1 / heat_eigvalues) @ heat_eigvectors.T
+assert np.abs(heat_inv @ heat - np.eye(mm)).max() < 1e-5
+
+heat_inv_ = lap_eigvectors @ np.diag(1 / (lap_eigvalues * theat + 1)) @ lap_eigvectors.T
+assert np.abs(heat_inv_ @ heat - np.eye(mm)).max() < 1e-5
+
+
+def make_restricted_heat_inv(mm_):
+    heat_restrict_eigvectors = heat_eigvectors[:, :mm_]
+    heat_restrict_inv = heat_restrict_eigvectors @ np.diag(1 / heat_eigvalues[:mm_]) @ heat_restrict_eigvectors.T
+    return heat_restrict_inv
+
+display_heat_solutions([
+    (lin.solve(heat, heat_input), "Euler"),
+    (make_restricted_heat_inv(mm // 2) @ heat_input, "50%"),
+    (make_restricted_heat_inv(mm // 4) @ heat_input, "25%"),
+    (make_restricted_heat_inv(mm // 10) @ heat_input, "10%"),
+    (make_restricted_heat_inv(mm // 20) @ heat_input, "5%"),
+    (make_restricted_heat_inv(mm // 40) @ heat_input, "2.5%"),
+    (make_restricted_heat_inv(mm // 100) @ heat_input, "1%"),
+], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
+
+display_heat_solutions([
+    (lin.solve(heat, heat_input_), "Euler"),
+    (make_restricted_heat_inv(mm // 2) @ heat_input_, "50%"),
+    (make_restricted_heat_inv(mm // 4) @ heat_input_, "25%"),
+    (make_restricted_heat_inv(mm // 10) @ heat_input_, "10%"),
+    (make_restricted_heat_inv(mm // 20) @ heat_input_, "5%"),
+    (make_restricted_heat_inv(mm // 40) @ heat_input_, "2.5%"),
+    (make_restricted_heat_inv(mm // 100) @ heat_input_, "1%"),
+], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
 
 
 show()
