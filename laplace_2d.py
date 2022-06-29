@@ -94,11 +94,6 @@ display_eigvectors([
 
 ### heat diffusion
 
-heat_input = np.zeros((nn, nn))
-heat_input[nn // 3 : 2 * nn // 3,  nn // 2 : 3 * nn // 4] = 1
-
-heat_input = heat_input.flatten()
-
 def make_heat_ope(dt, nstep):
     heat = np.eye(mm, mm)
     dheat = np.eye(mm, mm) + dt * lap / nstep
@@ -106,11 +101,29 @@ def make_heat_ope(dt, nstep):
         heat = heat @ dheat
     return heat
 
+### eigen decomposion of heat
+
+theat = 10
+heat = make_heat_ope(theat, 1)
+heat_eigvalues, heat_eigvectors = lin.eigh(heat)
+
 figure()
-title("2D $I - t \Delta$ spectrum")
+title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
 xlabel("rank")
 ylabel("$\lambda_i$")
-plot(lin.eigvalsh(make_heat_ope(.2, 1)))
+plot(heat_eigvalues, label="$\lambda_{heat}$")
+plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
+legend()
+
+assert np.abs(theat * lap_eigvalues + 1 - heat_eigvalues).max() < 1e-5
+
+### heat solve
+
+heat_input = np.zeros((nn, nn))
+heat_input[nn // 3 : 2 * nn // 3,  nn // 2 : 3 * nn // 4] = 1
+heat_input = heat_input.flatten()
+
+
 
 def display_heat_solutions(heat_profiles_labels, label=None):
     figure()
@@ -144,6 +157,8 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(100, 1), heat_input), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
 ], "Euler heat solutions")
+
+
 
 
 show()
