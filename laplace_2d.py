@@ -64,29 +64,33 @@ xlabel("rank")
 ylabel("$\lambda_i$")
 plot(lap_eigvalues)
 
-def display_eigvector(rank):
+def display_eigvectors(ranks, foo):
     extensions = {
         0: "st",
         1: "nd",
         2: "rd",
     }
-    ll = lap_eigvalues[rank]
-    vv = lap_eigvectors[:, rank].reshape(nn, nn)
     figure()
-    title("2D {}{} eigen vector $\lambda_{{{}}} = {:.2f}$".format(
-        rank + 1,
-        extensions.get(rank % 10, "th"),
-        rank,
-        ll))
-    ss = 1 / 4 * 8 / nn
-    imshow(vv, vmin=-ss, vmax=ss)
+    title("2D eigen vectors")
+    for kk, rank in enumerate(ranks):
+        ll = lap_eigvalues[rank]
+        vv = lap_eigvectors[:, rank].reshape(nn, nn)
+        subplot(foo, foo, kk + 1)
+        axis('off')
+        title("{}{} $\lambda_{{{}}} = {:.2f}$".format(
+            rank + 1,
+            extensions.get(rank % 10, "th"),
+            rank,
+            ll))
+        ss = 1 / 4 * 8 / nn
+        imshow(vv, vmin=-ss, vmax=ss)
     #colorbar()
 
-for rank in range(5):
-    display_eigvector(rank)
-
-display_eigvector(32)
-display_eigvector(56)
+display_eigvectors([
+    0, 1, 2, 3,
+    4, 5, 6, 7,
+    32, 33, 34, 35,
+    56, 57, 58, 59], 4)
 
 ### heat diffusion
 
