@@ -8,12 +8,22 @@ from pylab import *
 nn = 32
 show_figure = False
 
+def dump(label, value):
+    print("{} shape {} min {} max {}".format(
+        label,
+        value.shape,
+        value.min(),
+        value.max()))
+
 ### build complex
 
 iis, jjs = np.meshgrid(np.arange(nn, dtype=int), np.arange(nn, dtype=int))
 
 iis = iis.flatten()
 jjs = jjs.flatten()
+
+dump("iis", iis)
+dump("jjs", jjs)
 
 mm = iis.size
 assert mm == nn * nn
@@ -224,13 +234,55 @@ display_heat_solutions([
     (make_restricted_heat_inv(mm // 100) @ heat_input_, "1%"),
 ], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
 
-yys = iis.astype(float) / iis.size * 2 - 1 
-xxs = jjs.astype(float) / jjs.size * 2 - 1 
-sdf_example = np.sqrt(xxs * xxs + yys * yys)
-print(sdf_example.shape)
+print("====================")
 
-figure()
-imshow(sdf_example.reshape(nn, nn), vim=-1, vmax=1, cmap=plt.get_cmap("flag"))
+### project sdf on eigbasis
+
+xxs = jjs.astype(float) / (nn - 1) * 2 - 1
+yys = iis.astype(float) / (nn - 1) * 2 - 1
+xxs -= .5
+yys += .3333
+dump("xxs", xxs)
+dump("yys", yys)
+
+def make_restricted_heat_exp(mm_, tt):
+    heat_restrict_eigvectors = heat_eigvectors[:, :mm_]
+    heat_restrict_inv = heat_restrict_eigvectors @ np.diag(np.exp(-tt * heat_eigvalues[:mm_])) @ heat_restrict_eigvectors.T
+    return heat_restrict_inv
+
+sdf_example = np.sqrt(np.power(xxs, 2) + np.power(yys, 2))
+sdf_example_ = np.abs(xxs) + np.abs(yys)
+dump("sdf_example", sdf_example)
+dump("sdf_example_", sdf_example_)
+
+
+def display_opes(opes, examples):
+    figure()
+    current = 0
+    first = True
+    for inputs in examples:
+        vmin = inputs.min()
+        vmax = inputs.max()
+        for ope_func, ope_label in opes:
+            current += 1
+            subplot(len(examples), len(opes), current)
+            if first:
+                title(ope_label)
+            axis('off')
+            outputs = ope_func @ inputs
+            imshow(outputs.reshape(nn, nn), vmin=vmin, vmax=vmax, cmap=plt.get_cmap("nipy_spectral"))
+        first = False
+
+display_opes([
+        (np.eye(mm), "input"),
+        (make_restricted_heat_exp(mm // 2, 0), "50%"),
+        (make_restricted_heat_exp(mm // 4, 0), "25%"),
+        (make_restricted_heat_exp(mm // 10, 0), "10%"),
+        (make_restricted_heat_exp(mm // 20, 0), "5%"),
+        (make_restricted_heat_exp(mm // 40, 0), "2.5%"),
+        (make_restricted_heat_exp(mm // 100, 0), "1%"),
+], [sdf_example, sdf_example_])
+
 
 show()
 
