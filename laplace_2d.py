@@ -6,6 +6,7 @@ import numpy.linalg as lin
 from pylab import *
 
 nn = 32
+show_figure = False
 
 ### build complex
 
@@ -59,13 +60,16 @@ assert np.abs(lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T @ l
 assert np.abs(lap @ lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 assert np.abs(lap_eigvectors @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 
-figure()
-title("2D $\Delta$ spectrum")
-xlabel("rank")
-ylabel("$\lambda_i$")
-plot(lap_eigvalues)
+if show_figure:
+    figure()
+    title("2D $\Delta$ spectrum")
+    xlabel("rank")
+    ylabel("$\lambda_i$")
+    plot(lap_eigvalues)
 
 def display_eigvectors(label, eigvalues, eigvectors, ranks, foo):
+    if not show_figure:
+        return
     extensions = {
         0: "st",
         1: "nd",
@@ -116,6 +120,8 @@ heat_input_ = 8 * np.eye(nn,k=nn // 3)
 heat_input_ = heat_input_.flatten()
 
 def display_heat_solutions(heat_profiles_labels, label=None):
+    if not show_figure:
+        return
     figure()
     if label is not None:
         suptitle(label)
@@ -172,13 +178,14 @@ display_eigvectors(
     32, 33, 34, 35,
     56, 57, 58, 59], 4)
 
-figure()
-title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
-xlabel("rank")
-ylabel("$\lambda_i$")
-plot(heat_eigvalues, label="$\lambda_{heat}$")
-plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
-legend()
+if show_figure:
+    figure()
+    title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
+    xlabel("rank")
+    ylabel("$\lambda_i$")
+    plot(heat_eigvalues, label="$\lambda_{heat}$")
+    plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
+    legend()
 
 heat_ = np.eye(mm) + theat * lap_eigvectors @ diag(lap_eigvalues) @ lap_eigvectors.T
 assert np.abs(heat - heat_).max() < 1e-5
@@ -191,7 +198,6 @@ assert np.abs(heat_inv @ heat - np.eye(mm)).max() < 1e-5
 
 heat_inv_ = lap_eigvectors @ np.diag(1 / (lap_eigvalues * theat + 1)) @ lap_eigvectors.T
 assert np.abs(heat_inv_ @ heat - np.eye(mm)).max() < 1e-5
-
 
 def make_restricted_heat_inv(mm_):
     heat_restrict_eigvectors = heat_eigvectors[:, :mm_]
@@ -218,6 +224,13 @@ display_heat_solutions([
     (make_restricted_heat_inv(mm // 100) @ heat_input_, "1%"),
 ], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
 
+yys = iis.astype(float) / iis.size * 2 - 1 
+xxs = jjs.astype(float) / jjs.size * 2 - 1 
+sdf_example = np.sqrt(xxs * xxs + yys * yys)
+print(sdf_example.shape)
+
+figure()
+imshow(sdf_example.reshape(nn, nn), vim=-1, vmax=1, cmap=plt.get_cmap("flag"))
 
 show()
 
