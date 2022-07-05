@@ -5,8 +5,8 @@ import numpy as np
 import numpy.linalg as lin
 from pylab import *
 
-nn = 32
-show_figure = False
+nn = 64
+show_figure = True
 
 def dump(label, value):
     print("{} shape {} min {} max {}".format(
@@ -240,24 +240,26 @@ print("====================")
 
 xxs = jjs.astype(float) / (nn - 1) * 2 - 1
 yys = iis.astype(float) / (nn - 1) * 2 - 1
-xxs -= .5
-yys += .3333
+# xxs -= .5
+# yys += .3333
 dump("xxs", xxs)
 dump("yys", yys)
+
+the = -np.pi / 6
+xxs_ = cos(the) * xxs + sin(the) * yys
+yys_ = -sin(the) * xxs + cos(the) * yys
 
 def make_restricted_heat_exp(mm_, tt):
     heat_restrict_eigvectors = heat_eigvectors[:, :mm_]
     heat_restrict_inv = heat_restrict_eigvectors @ np.diag(np.exp(-tt * heat_eigvalues[:mm_])) @ heat_restrict_eigvectors.T
     return heat_restrict_inv
 
-sdf_example = np.sqrt(np.power(xxs, 2) + np.power(yys, 2))
-sdf_example_ = np.abs(xxs) + np.abs(yys)
-dump("sdf_example", sdf_example)
-dump("sdf_example_", sdf_example_)
-
-
-def display_opes(opes, examples):
+def display_opes(opes, examples, label=None):
+    if not show_figure:
+        return
     figure()
+    if label is not None:
+        suptitle(label)
     current = 0
     first = True
     for inputs in examples:
@@ -273,6 +275,18 @@ def display_opes(opes, examples):
             imshow(outputs.reshape(nn, nn), vmin=vmin, vmax=vmax, cmap=plt.get_cmap("nipy_spectral"))
         first = False
 
+sdf_example = np.sqrt(np.power(xxs - .5, 2) + np.power(yys + .333, 2))
+sdf_example_ = np.abs(xxs - .5) + np.abs(yys + .333)
+sdf_example__ = np.maximum(np.abs(xxs_ + .5), np.abs(yys_ - .2))
+sdf_examples = [
+    sdf_example,
+    sdf_example_,
+    sdf_example__,
+    np.minimum(sdf_example__, sdf_example),
+]
+for kk, ex in enumerate(sdf_examples):
+    dump("sdf_example_{:02d}".format(kk), ex)
+
 display_opes([
         (np.eye(mm), "input"),
         (make_restricted_heat_exp(mm // 2, 0), "50%"),
@@ -281,7 +295,7 @@ display_opes([
         (make_restricted_heat_exp(mm // 20, 0), "5%"),
         (make_restricted_heat_exp(mm // 40, 0), "2.5%"),
         (make_restricted_heat_exp(mm // 100, 0), "1%"),
-], [sdf_example, sdf_example_])
+], sdf_examples, "SDF project on eigen subspaces")
 
 
 show()
