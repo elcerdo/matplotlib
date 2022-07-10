@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import os.path
 import numpy as np
 import numpy.linalg as lin
 from pylab import *
 
-nn = 64
+nn = 32
 show_figure = True
+save_figure = True
+
+def dump_figure(figpath):
+    if not save_figure:
+        return
+    if figpath is None:
+        return
+    savefig(os.path.join("laplace_2d_figs", "{}.png".format(figpath)))
+    savefig(os.path.join("laplace_2d_figs", "{}.pdf".format(figpath)))
 
 def dump(label, value):
     print("{} shape {} min {} max {}".format(
@@ -76,8 +86,9 @@ if show_figure:
     xlabel("rank")
     ylabel("$\lambda_i$")
     plot(lap_eigvalues)
+    dump_figure("lap_spectrum")
 
-def display_eigvectors(label, eigvalues, eigvectors, ranks, foo):
+def display_eigvectors(eigvalues, eigvectors, ranks, foo, label=None, figpath=None):
     if not show_figure:
         return
     extensions = {
@@ -101,15 +112,17 @@ def display_eigvectors(label, eigvalues, eigvectors, ranks, foo):
         ss = 1 / 4 * 8 / nn
         imshow(vv, vmin=-ss, vmax=ss)
     #colorbar()
+    dump_figure(figpath)
 
 display_eigvectors(
-    "2D $\Delta$ eigen vectors",
     lap_eigvalues,
     lap_eigvectors, [
     0, 1, 2, 3,
     4, 5, 6, 7,
     32, 33, 34, 35,
-    56, 57, 58, 59], 4)
+    56, 57, 58, 59], 4,
+    label="2D $\Delta$ eigen vectors",
+    figpath="lap_eigenvectors")
 
 ### heat diffusion
 
@@ -129,7 +142,7 @@ heat_input = heat_input.flatten()
 heat_input_ = 8 * np.eye(nn,k=nn // 3)
 heat_input_ = heat_input_.flatten()
 
-def display_heat_solutions(heat_profiles_labels, label=None):
+def display_heat_solutions(heat_profiles_labels, label=None, figpath=None):
     if not show_figure:
         return
     figure()
@@ -155,6 +168,7 @@ def display_heat_solutions(heat_profiles_labels, label=None):
         axis('off')
         ylim(-.1, 1.1)
         plot(heat_profile.reshape(nn, nn)[nn // 2, :])
+    dump_figure(figpath)
 
 display_heat_solutions([
     (heat_input, "input"),
@@ -162,7 +176,7 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(10, 1), heat_input), "10s"),
     (lin.solve(make_heat_ope(100, 1), heat_input), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
-], "Euler heat solutions")
+], label="Euler heat solutions", figpath="heat_euler_00")
 
 display_heat_solutions([
     (heat_input_, "input"),
@@ -170,7 +184,7 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(10, 1), heat_input_), "10s"),
     (lin.solve(make_heat_ope(100, 1), heat_input_), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input_), "1000s"),
-], "Euler heat solutions")
+], label="Euler heat solutions", figpath="heat_euler_01")
 
 ### eigen decomposion of heat
 
@@ -180,13 +194,14 @@ heat_eigvalues, heat_eigvectors = lin.eigh(heat)
 assert np.abs(theat * lap_eigvalues + 1 - heat_eigvalues).max() < 1e-5
 
 display_eigvectors(
-    "2D $heat$ eigen vectors",
     heat_eigvalues,
     heat_eigvectors, [
     0, 1, 2, 3,
     4, 5, 6, 7,
     32, 33, 34, 35,
-    56, 57, 58, 59], 4)
+    56, 57, 58, 59], 4,
+    label="2D $heat$ eigen vectors",
+    figpath="heat_eigenvectors")
 
 if show_figure:
     figure()
@@ -196,6 +211,7 @@ if show_figure:
     plot(heat_eigvalues, label="$\lambda_{heat}$")
     plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
     legend()
+    dump_figure("heat_spectrum")
 
 heat_ = np.eye(mm) + theat * lap_eigvectors @ diag(lap_eigvalues) @ lap_eigvectors.T
 assert np.abs(heat - heat_).max() < 1e-5
@@ -222,7 +238,9 @@ display_heat_solutions([
     (make_restricted_heat_inv(mm // 20) @ heat_input, "5%"),
     (make_restricted_heat_inv(mm // 40) @ heat_input, "2.5%"),
     (make_restricted_heat_inv(mm // 100) @ heat_input, "1%"),
-], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
+],
+    label="Restricted eigenbasis $heat$ solutions {}s".format(theat),
+    figpath="heat_restricted_00")
 
 display_heat_solutions([
     (lin.solve(heat, heat_input_), "Euler"),
@@ -232,7 +250,9 @@ display_heat_solutions([
     (make_restricted_heat_inv(mm // 20) @ heat_input_, "5%"),
     (make_restricted_heat_inv(mm // 40) @ heat_input_, "2.5%"),
     (make_restricted_heat_inv(mm // 100) @ heat_input_, "1%"),
-], "Restricted eigenbasis $heat$ solutions {}s".format(theat))
+],
+    label="Restricted eigenbasis $heat$ solutions {}s".format(theat),
+    figpath="heat_restricted_01")
 
 print("====================")
 
@@ -254,7 +274,7 @@ def make_restricted_heat_exp(mm_, tt):
     heat_restrict_inv = heat_restrict_eigvectors @ np.diag(np.exp(-tt * heat_eigvalues[:mm_])) @ heat_restrict_eigvectors.T
     return heat_restrict_inv
 
-def display_opes(opes, examples, label=None):
+def display_opes(opes, examples, label=None, figpath=None):
     if not show_figure:
         return
     figure()
@@ -274,6 +294,7 @@ def display_opes(opes, examples, label=None):
             outputs = ope_func @ inputs
             imshow(outputs.reshape(nn, nn), vmin=vmin, vmax=vmax, cmap=plt.get_cmap("nipy_spectral"))
         first = False
+    dump_figure(figpath)
 
 sdf_example = np.sqrt(np.power(xxs - .5, 2) + np.power(yys + .333, 2))
 sdf_example_ = np.abs(xxs - .5) + np.abs(yys + .333)
@@ -295,7 +316,7 @@ display_opes([
         (make_restricted_heat_exp(mm // 20, 0), "5%"),
         (make_restricted_heat_exp(mm // 40, 0), "2.5%"),
         (make_restricted_heat_exp(mm // 100, 0), "1%"),
-], sdf_examples, "SDF project on eigen subspaces")
+], sdf_examples, label="SDF project on eigen subspaces", figpath="sdf_restricted")
 
 
 show()
