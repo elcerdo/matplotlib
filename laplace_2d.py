@@ -6,15 +6,18 @@ import numpy as np
 import numpy.linalg as lin
 from pylab import *
 
-nn = 32
-show_figure = True
+nn = 64
+show_figure = False
 save_figure = True
+
+plt.rcParams['figure.figsize'] = [14 / 2, 9 / 2]
 
 def dump_figure(figpath):
     if not save_figure:
         return
     if figpath is None:
         return
+    print("saving \"{}\"".format(figpath))
     savefig(os.path.join("laplace_2d_figs", "{}.png".format(figpath)))
     savefig(os.path.join("laplace_2d_figs", "{}.pdf".format(figpath)))
 
@@ -80,17 +83,14 @@ assert np.abs(lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T @ l
 assert np.abs(lap @ lap_eigvectors @ np.diag(1 / lap_eigvalues) @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 assert np.abs(lap_eigvectors @ lap_eigvectors.T - np.eye(mm)).max() < 1e-5
 
-if show_figure:
-    figure()
-    title("2D $\Delta$ spectrum")
-    xlabel("rank")
-    ylabel("$\lambda_i$")
-    plot(lap_eigvalues)
-    dump_figure("lap_spectrum")
+figure()
+title("2D $\Delta$ spectrum")
+xlabel("rank")
+ylabel("$\lambda_i$")
+plot(lap_eigvalues)
+dump_figure("lap_spectrum")
 
-def display_eigvectors(eigvalues, eigvectors, ranks, foo, label=None, figpath=None):
-    if not show_figure:
-        return
+def display_eigvectors(eigvalues, eigvectors, ranks, foo, bar, label=None, figpath=None):
     extensions = {
         0: "st",
         1: "nd",
@@ -102,11 +102,10 @@ def display_eigvectors(eigvalues, eigvectors, ranks, foo, label=None, figpath=No
     for kk, rank in enumerate(ranks):
         ll = eigvalues[rank]
         vv = eigvectors[:, rank].reshape(nn, nn)
-        subplot(foo, foo, kk + 1)
+        subplot(foo, bar, kk + 1)
         axis('off')
-        title("{}{} $\lambda_{{{}}} = {:.2f}$".format(
-            rank + 1,
-            extensions.get(rank % 10, "th"),
+        rank_str = "{}{}".format(rank + 1, extensions.get(rank % 10, "th"))
+        title("$\lambda_{{{}}} = {:.2f}$".format(
             rank,
             ll))
         ss = 1 / 4 * 8 / nn
@@ -117,11 +116,10 @@ def display_eigvectors(eigvalues, eigvectors, ranks, foo, label=None, figpath=No
 display_eigvectors(
     lap_eigvalues,
     lap_eigvectors, [
-    0, 1, 2, 3,
-    4, 5, 6, 7,
-    32, 33, 34, 35,
-    56, 57, 58, 59], 4,
-    label="2D $\Delta$ eigen vectors",
+    0, 1, 2, 3, 4,
+    5, 6, 7, 7, 8,
+    33, 34, 35, 58, 59], 3, 5,
+    label="2D $\Delta$ eigen vectors $\phi_i$",
     figpath="lap_eigenvectors")
 
 ### heat diffusion
@@ -143,8 +141,6 @@ heat_input_ = 8 * np.eye(nn,k=nn // 3)
 heat_input_ = heat_input_.flatten()
 
 def display_heat_solutions(heat_profiles_labels, label=None, figpath=None):
-    if not show_figure:
-        return
     figure()
     if label is not None:
         suptitle(label)
@@ -176,7 +172,7 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(10, 1), heat_input), "10s"),
     (lin.solve(make_heat_ope(100, 1), heat_input), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input), "1000s"),
-], label="Euler heat solutions", figpath="heat_euler_00")
+], label="Euler $heat$ solutions", figpath="heat_euler_00")
 
 display_heat_solutions([
     (heat_input_, "input"),
@@ -184,7 +180,7 @@ display_heat_solutions([
     (lin.solve(make_heat_ope(10, 1), heat_input_), "10s"),
     (lin.solve(make_heat_ope(100, 1), heat_input_), "100s"),
     (lin.solve(make_heat_ope(1000, 1), heat_input_), "1000s"),
-], label="Euler heat solutions", figpath="heat_euler_01")
+], label="Euler $heat$ solutions", figpath="heat_euler_01")
 
 ### eigen decomposion of heat
 
@@ -196,22 +192,20 @@ assert np.abs(theat * lap_eigvalues + 1 - heat_eigvalues).max() < 1e-5
 display_eigvectors(
     heat_eigvalues,
     heat_eigvectors, [
-    0, 1, 2, 3,
-    4, 5, 6, 7,
-    32, 33, 34, 35,
-    56, 57, 58, 59], 4,
-    label="2D $heat$ eigen vectors",
+    0, 1, 2, 3, 4,
+    5, 6, 7, 7, 8,
+    33, 34, 35, 58, 59], 3, 5,
+    label="2D $heat$ eigen vectors $\phi_i$",
     figpath="heat_eigenvectors")
 
-if show_figure:
-    figure()
-    title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
-    xlabel("rank")
-    ylabel("$\lambda_i$")
-    plot(heat_eigvalues, label="$\lambda_{heat}$")
-    plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
-    legend()
-    dump_figure("heat_spectrum")
+figure()
+title("2D $heat = I + t \Delta$ spectrum {}s".format(theat))
+xlabel("rank")
+ylabel("$\lambda_i$")
+plot(heat_eigvalues, label="$\lambda_{heat}$")
+plot(lap_eigvalues * theat + 1, label="$1+t\lambda_{\Delta}$")
+legend()
+dump_figure("heat_spectrum")
 
 heat_ = np.eye(mm) + theat * lap_eigvectors @ diag(lap_eigvalues) @ lap_eigvectors.T
 assert np.abs(heat - heat_).max() < 1e-5
@@ -275,8 +269,6 @@ def make_restricted_heat_exp(mm_, tt):
     return heat_restrict_inv
 
 def display_opes(opes, examples, label=None, figpath=None):
-    if not show_figure:
-        return
     figure()
     if label is not None:
         suptitle(label)
@@ -318,6 +310,6 @@ display_opes([
         (make_restricted_heat_exp(mm // 100, 0), "1%"),
 ], sdf_examples, label="SDF project on eigen subspaces", figpath="sdf_restricted")
 
-
-show()
+if show_figure:
+    show()
 
