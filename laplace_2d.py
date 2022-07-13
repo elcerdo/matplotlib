@@ -7,6 +7,8 @@ import numpy.linalg as lin
 from pylab import *
 
 nn = 64
+mm = nn * nn
+
 show_figure = False
 save_figure = True
 
@@ -38,8 +40,7 @@ jjs = jjs.flatten()
 dump("iis", iis)
 dump("jjs", jjs)
 
-mm = iis.size
-assert mm == nn * nn
+assert mm == iis.size
 
 cell_to_indices = {}
 for index, cell in enumerate(zip(iis, jjs)):
